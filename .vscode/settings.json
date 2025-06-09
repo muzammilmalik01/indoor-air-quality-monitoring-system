@@ -1,5 +1,8 @@
 {
     "nrf-connect.applications": [
         "${workspaceFolder}/client_node1"
-    ]
+    ],
+    "files.associations": {
+        "ccs811.h": "c"
+    }
 }
