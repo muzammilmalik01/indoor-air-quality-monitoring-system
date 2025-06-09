@@ -1,0 +1,10 @@
+# Drivers configuration options for Sensirion SCD4x
+
+# Copyright (c) 2024 Jan Fäh
+# SPDX-License-Identifier: Apache-2.0
+
+config SCD4X
+	bool "SCD4x Carbon Dioxide Sensor"
+	depends on I2C
+	help
+	  Enable driver for the Sensirion SCD4x carbon dioxide sensors.
