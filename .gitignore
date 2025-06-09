@@ -1,0 +1,4 @@
+build*/
+client_node1/build*/
+client_node2/build*/
+server_node/build*/
