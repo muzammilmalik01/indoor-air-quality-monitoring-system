@@ -1,8 +1,10 @@
 {
     "nrf-connect.applications": [
-        "${workspaceFolder}/client_node1"
+        "${workspaceFolder}/client_node1",
+        "${workspaceFolder}/server_node"
     ],
     "files.associations": {
-        "ccs811.h": "c"
+        "ccs811.h": "c",
+        "i2c.h": "c"
     }
 }

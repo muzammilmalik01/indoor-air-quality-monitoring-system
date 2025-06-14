@@ -7,14 +7,9 @@
 #include <zephyr/logging/log.h>
 #include "sensor/scd4x/scd4x.h"
 #include <openthread/coap.h>
-#include <openthread/thread.h> // Added for otMeshLocalPrefix definition
+#include <openthread/thread.h>
 
 // TODO: Add error message to server sending for sensor.
-// Improve sending data (messages) to server.
-// Complete SCD41  + CCS811 Data Sending to Server.
-// TODO: Modularize code for better readability and maintainability.
-// TODO: Retry mechanism for sensor data fetching in case of failure.
-// TODO: Add Sensor Status (bool scd41_ok)
 
 // THREAD NETWORK CONFIGURATION //
 void coap_init(void)
@@ -125,157 +120,115 @@ static void send_coap_message(const char *uri_path, const char *payload)
 #endif
 
 const struct device *scd41 = DEVICE_DT_GET_ANY(sensirion_scd41);
-const struct device *ccs81 = DEVICE_DT_GET_ANY(ams_ccs811);
+const struct device *ccs811 = DEVICE_DT_GET_ANY(ams_ccs811);
 
 // Function to send SCD41 data in JSON format
-void send_scd41_data(struct sensor_value co2_41, struct sensor_value temo, struct sensor_value humi)
+void send_scd41_data(struct sensor_value co2_41, struct sensor_value temo, struct sensor_value humi, bool *scd41_ok)
 {
 	char payload[256]; // Buffer to hold the JSON payload
 
 	// Construct the JSON payload
 	snprintf(payload, sizeof(payload),
-			 "{\"sensor\":\"scd41\",\"data\":{\"CO2\":%d.%02d,\"Temperature\":%d.%02d,\"Humidity\":%d.%02d}}",
-			 co2_41.val1, co2_41.val2, temo.val1, temo.val2, humi.val1, humi.val2);
-
+			 "{\"sensor\":\"scd41\",\"data\":{\"CO2\":%d.%02d,\"Temperature\":%d.%02d,\"Humidity\":%d.%02d, \"SCD41_OK\":%s}}",
+			 co2_41.val1, co2_41.val2, temo.val1, temo.val2, humi.val1, humi.val2,
+			 (*scd41_ok) ? "true" : "false");
 
 	// Send the CoAP message
 	send_coap_message("sensor_data", payload);
 }
 
+void send_ccs811_data(struct sensor_value co2_881, struct sensor_value tvoc, bool *ccs881_ok)
+{
+	char payload[256]; // Buffer to hold the JSON payload
+
+	// Construct the JSON payload
+	snprintf(payload, sizeof(payload),
+			 "{\"sensor\":\"ccs811\",\"data\":{\"eCO2\":%d.%02d,\"TVOC\":%d.%02d, \"CCS811_OK\":%s}}",
+			 co2_881.val1, co2_881.val2, tvoc.val1, tvoc.val2, (*ccs881_ok) ? "true" : "false");
+
+	// Send the CoAP message
+	send_coap_message("sensor_data", payload);
+}
+
+bool is_scd41_data_valid(struct sensor_value co2, struct sensor_value temp, struct sensor_value hum) {
+	return (co2.val1 > 0 && co2.val1 < 5000) &&
+           (temp.val1 > -40 && temp.val1 < 85) &&
+           (hum.val1 >= 0 && hum.val1 <= 100);
+}
+
+bool is_ccs811_data_valid(struct sensor_value co2, struct sensor_value voc) {
+    return (co2.val1 > 400 && co2.val1 < 8192) &&
+           (voc.val1 >= 0 && voc.val1 < 1187); 
+}
+
 int main(void)
 {
+	bool SCD41_OK = false;
+	bool CCS811_OK = false;
 	coap_init();
-	bool scd41_ok = true;
-	bool ccs81_ok = true;
 	if (!device_is_ready(scd41))
 	{
 		printk("SCD41 device is not ready\n");
-		scd41_ok = false;
 		return -1;
 	}
-	if (!device_is_ready(ccs81))
+	if (!device_is_ready(ccs811))
 	{
 		printk("CCS811 device is not ready\n");
-		ccs81_ok = false;
 		return -1;
 	}
 
-	struct sensor_value co2_41, co2_811, temo, humi, tvoc, voltage, current;
-	while (true)
-	{
-		if (sensor_sample_fetch(scd41) < 0)
-		{
-			printk("Failed to fetch sample from SCD41\n");
-			continue;
-			// message to Server for SCD41 not working
-		}
-		if (sensor_sample_fetch(ccs81) < 0)
-		{
-			printk("Failed to fetch sample from CCS811\n");
-			continue;
-			// message to Server for CCS811 not working
-		}
-		else
-		{
-			printk("Fetched samples successfully from both sensors.\n");
-			// message to Server for sensors working.
+	struct sensor_value co2_41, co2_811, temp, humi, tvoc;
+	while (true) {
+        // Fetch data from SCD41
+        if (sensor_sample_fetch(scd41) < 0) {
+            printk("Failed to fetch sample from SCD41\n");
+			SCD41_OK = false;
+        } else {
+            sensor_channel_get(scd41, SENSOR_CHAN_CO2, &co2_41);
+            sensor_channel_get(scd41, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+            sensor_channel_get(scd41, SENSOR_CHAN_HUMIDITY, &humi);
+        }
 
-			// ***** Error hangling for SCD41 *****
-			if (sensor_channel_get(scd41, SENSOR_CHAN_CO2, &co2_41) < 0)
-			{
-				printk("Failed to get CO2 channel from SCD41\n");
-				// message to server: Cannot get CO2 Data from SCD41
-				continue;
-			}
-			if (sensor_channel_get(scd41, SENSOR_CHAN_AMBIENT_TEMP, &temo) < 0)
-			{
-				printk("Failed to get temperature from SCD41\n");
-				// message to server: Cannot get Temperature Data from SCD41
-				continue;
-			}
-			if (sensor_channel_get(scd41, SENSOR_CHAN_HUMIDITY, &humi) < 0)
-			{
-				printk("Failed to get Humidity from SCD41\n");
-				// message to server: Cannot get Humidity from SCD41
-				continue;
-			}
+        // Fetch data from CCS811
+        if (sensor_sample_fetch(ccs811) < 0) {
+            printk("Failed to fetch sample from CCS811\n");
+			CCS811_OK = false;
+        } else {
+            sensor_channel_get(ccs811, SENSOR_CHAN_CO2, &co2_811);
+            sensor_channel_get(ccs811, SENSOR_CHAN_VOC, &tvoc);
+        }
 
-			// ***** Error hangling for SCD41 ENDS *****
+        // Validate data
+        bool scd41_valid = is_scd41_data_valid(co2_41, temp, humi);
+        bool ccs811_valid = is_ccs811_data_valid(co2_811, tvoc);
 
-			// ***** Error hangling for CCS81 *****
+        // Send data conditionally
+        if (scd41_valid && ccs811_valid) {
+			// if both sensors get valid data, send both
+			SCD41_OK = true;
+			CCS811_OK = true;
+            printk("Sending data from both sensors...\n");
+            send_scd41_data(co2_41, temp, humi, &SCD41_OK);
+            send_ccs811_data(co2_811, tvoc, &CCS811_OK); 
+        } else if (scd41_valid) {
+			// if only SCD41 is valid, send SC41 data only
+			SCD41_OK = true;
+            printk("Sending data from SCD41 only...\n");
+            send_scd41_data(co2_41, temp, humi, &SCD41_OK);
+        } else if (ccs811_valid) {
+			// if only CCS811 is valid, send CCS811 data only
+			CCS811_OK = true;
+            printk("Sending data from CCS811 only...\n");
+            send_ccs811_data(co2_811, tvoc, &CCS811_OK);
+        } else {
+			// no data valid to send
+			SCD41_OK = false;
+			CCS811_OK = false;
+            printk("No valid data to send (Sensor Data out of bound).\n");
+			//TODO: Add error message to server sending for sensor.
+        }
 
-			if (sensor_channel_get(ccs81, SENSOR_CHAN_CO2, &co2_811) < 0)
-			{
-				printk("Failed to get eCO2 from CCS811\n");
-				continue;
-				// message to server: Cannot get eCO2 from CCS811
-			}
-			if (sensor_channel_get(ccs81, SENSOR_CHAN_VOC, &tvoc) < 0)
-			{
-				printk("Failed to get TVOC from CCS81\n");
-				// message to server: Cannot get TVOC from CCS811
-				continue;
-			}
-			if (sensor_channel_get(ccs81, SENSOR_CHAN_VOLTAGE, &voltage) < 0.0)
-			{
-				printk("Failed to get Voltage from CCS811\n");
-				// message to server: Cannot get Voltage from CCS811
-				continue;
-			}
-			if (sensor_channel_get(ccs81, SENSOR_CHAN_CURRENT, &current) < 0)
-			{
-				printk("Failed to get Current from CCS811\n");
-				// message to server: Cannot get Current from CCS811
-				continue;
-			}
-			// ***** Error hangling for CCS81 ENDS *****
-			else
-			{
-				// Data validation for SCD41 and CCS811
-				if (temo.val1 < -40 || temo.val1 > 85)
-				{
-					printk("Invalid Temperature value from SCD41: %d.%06d C\n", temo.val1, temo.val2);
-					// continue;
-					// message to server: Invalid Temperature value from SCD41
-				}
-				if (humi.val1 < 0 || humi.val1 > 100)
-				{
-					printk("Invalid Humidity value from SCD41: %d.%06d %%\n", humi.val1, humi.val2);
-					// continue;
-					// message to server: Invalid Humidity value from SCD41
-				}
-				if (co2_41.val1 < 0 && co2_41.val1 > 5000)
-				{
-					printk("Invalid CO2 value from SCD41: %d\n", co2_41.val1);
-					// continue;
-					// message to server: Invalid CO2 value from SCD41
-				}
-				if (co2_811.val1 < 400 && co2_811.val1 > 8192)
-				{
-					printk("Invalid eCO2 value from CCS811: %u\n", co2_811.val1);
-					continue;
-					// message to server: Invalid eCO2 value from CCS811
-				}
-				if (tvoc.val1 < 0 && tvoc.val1 > 1187)
-				{
-					printk("Invalid TVOC value from CCS811: %u\n", tvoc.val1);
-					continue;
-					// message to server: Invalid TVOC value from CCS811
-				}
-
-				printk("\nSCD41:\n");
-				printk("CO2: %d.%06d ppm, Temperature: %d.%06d C, Humidity: %d.%06d %%\n",
-					   co2_41.val1, co2_41.val2, temo.val1, temo.val2, humi.val1, humi.val2);
-				const char *test_payload = "{\"sensor\":\"test\",\"data\":{\"value\":123}}";
-				send_scd41_data(co2_41, temo, humi); // Send SCD41 data in JSON format
-				// printk("\nCCS811:\n");
-				// printk("%u ppm eCO2; %u ppb eTVOC\n", co2_811.val1, tvoc.val1);
-				// printk("Voltage: %d.%06dV; Current: %d.%06dA\n", voltage.val1,
-				// 	   voltage.val2, current.val1, current.val2);
-				// CoAP message to server with the data
-			}
-		}
-		k_sleep(K_SECONDS(10));
-	}
+        k_sleep(K_SECONDS(20)); // Sleep before the next iteration
+    }
 	return 0;
 }
