@@ -47,7 +47,7 @@ static void storedata_request_cb(void *p_context, otMessage *p_message,
         myText_length = otMessageRead(p_message, otMessageGetOffset(p_message),
             myText, TEXTBUFFER_SIZE - 1);
         myText[myText_length] = '\0';
-        printk("Received: %s\n", myText);
+        printk("\nReceived: %s\n", myText);
 
         if (messageType == OT_COAP_TYPE_CONFIRMABLE) {
             storedata_response_send(p_message, p_message_info);
