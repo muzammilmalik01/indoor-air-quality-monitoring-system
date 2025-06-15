@@ -1,10 +1,20 @@
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/uart.h>
 #include <zephyr/sys/printk.h>
 #include <openthread/coap.h>
 #include <openthread/thread.h>
 #include <zephyr/net/openthread.h>
+#include <stdio.h>
 
-// Server Implenentation
+
+// UART FT232 Configuration
+#define UART1_NODE DT_NODELABEL(uart1)
+static const struct device *uart_dev = DEVICE_DT_GET(UART1_NODE);
+static uint8_t tx_buf[256];
+static int tx_buf_length;
+
+
+// COAP Server Implenentation
 
 #define TEXTBUFFER_SIZE 256
 char myText[TEXTBUFFER_SIZE];
@@ -22,12 +32,6 @@ static otCoapResource m_storedata_resource = {
     .mNext = NULL
 };
 
-// static otCoapResource m_ping_resource = {
-//     .mUriPath = "ping",
-//     .mHandler = ping_request_cb,
-//     .mContext = NULL,
-//     .mNext = NULL
-// };
 
 // Handles incoming PUT requests to the "storedata" resource.
 static void storedata_request_cb(void *p_context, otMessage *p_message, 
@@ -48,7 +52,8 @@ static void storedata_request_cb(void *p_context, otMessage *p_message,
             myText, TEXTBUFFER_SIZE - 1);
         myText[myText_length] = '\0';
         printk("\nReceived: %s\n", myText);
-
+        tx_buf_length = sprintf(tx_buf, myText);
+        uart_tx(uart_dev, tx_buf, tx_buf_length, SYS_FOREVER_US);
         if (messageType == OT_COAP_TYPE_CONFIRMABLE) {
             storedata_response_send(p_message, p_message_info);
         }
@@ -82,13 +87,6 @@ static void storedata_response_send(otMessage *p_request_message,
     }
 }
 
-// Handler for "ping" resource
-// static void ping_request_cb(void *p_context, otMessage *p_message, const otMessageInfo *p_message_info) {
-//     // Handle ping requests
-//     printk("Handling ping request\n");
-//     // Process the message and send a response
-// }
-
 // Assigns a fixed IPv6 address to the server (fdde:ad00:beef:0::1).
 void addIPv6Address(void) {
     otInstance *myInstance = openthread_get_default_instance();
@@ -114,8 +112,6 @@ void coap_init(void) {
         if (error != OT_ERROR_NONE) { break; }
 
         otCoapAddResource(p_instance, &m_storedata_resource);
-        // Register "ping" resource
-        // otCoapAddResource(p_instance, &m_ping_resource);
     } while(false);
 
     if (error == OT_ERROR_NONE) {
@@ -128,8 +124,15 @@ void coap_init(void) {
 int main(void) {
     addIPv6Address();
     coap_init();
+    if (!device_is_ready(uart_dev)) {
+        printk("UART device not ready\n");
+        return -1;
+    }
+    printk("UART device is ready\n");
     
     while (1) {
-        
+        k_msleep(1000);  // 1-second delay
+        tx_buf_length = sprintf(tx_buf, "CO2=430;PM=22;TVOC=120\n"); //Dummy Data
+        uart_tx(uart_dev, tx_buf, tx_buf_length, SYS_FOREVER_US);
     }
 }
