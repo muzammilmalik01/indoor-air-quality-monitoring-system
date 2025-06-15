@@ -1,0 +1,23 @@
+description: Sensirion SPS30 particulate matter sensor
+
+compatible: "sensirion,sps30"
+
+include: i2c-device.yaml
+
+properties:
+  reg:
+    required: true
+    description: I2C address of the sensor
+
+  label:
+    type: string
+    deprecated: true
+    description: Human-readable label for the device
+
+  model:
+    type: string
+    required: true
+    description: |
+      The sensor model in use
+    enum:
+      - "sps30"

@@ -1,0 +1,5 @@
+config SPS30
+	bool "SPS30 TVOC Sensor"
+	depends on I2C
+	help
+	  Enable driver for the Sensirion SPS30 carbon dioxide sensors.
