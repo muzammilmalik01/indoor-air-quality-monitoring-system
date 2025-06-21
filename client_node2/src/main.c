@@ -5,6 +5,7 @@
 #include <zephyr/drivers/sensor.h>
 #include "sensor/sps30/sps30.h"
 #include <openthread/coap.h>
+#include <zephyr/net/openthread.h> 
 #include <openthread/thread.h>
 #include <zephyr/logging/log.h>
 
@@ -130,9 +131,20 @@ void send_sps30_data(struct sensor_value pm_1p0, struct sensor_value pm_2p5, str
 
 	// Construct the JSON payload
 	snprintf(payload, sizeof(payload),
-			 "{\"sensor\":\"sps30\",\"data\":{\"PM1.0\":%d.%02d,\"PM2.5\":%d.%02d,\"PM10.0\":%d.%02d, \"SPS30_OK\":%s}}",
+			 "{\"sensor\":\"sps30\",\"data\":{\"PM1.0\":%d.%02d,\"PM2.5\":%d.%02d,\"PM10.0\":%d.%02d, \"SPS30_OK\":%s}}\n",
 			 pm_1p0.val1, pm_1p0.val2, pm_2p5.val1, pm_2p5.val2, pm_10p0.val1, pm_10p0.val2,
 			 (*sps30_ok) ? "true" : "false");
+
+	// Send the CoAP message
+	send_coap_message("sensor_data", payload);
+}
+
+void send_error_message(const char *message, bool *sps30_ok)
+{
+	char payload[256]; // Buffer to hold the JSON payload
+
+	// Construct the JSON payload
+	snprintf(payload, sizeof(payload), "{\"error\":\"%s\",\"SPS30_OK\":\"%s}\n", message, (*sps30_ok) ? "true" : "false");
 
 	// Send the CoAP message
 	send_coap_message("sensor_data", payload);
@@ -152,7 +164,9 @@ int main(void)
 		if (sensor_sample_fetch(sps30) < 0){
 			printk("Failed to fetch sample from SPS30 sensor\n");
 			SPS30_OK = false;
+			send_error_message("Failed to fetch sample from SPS30 sensor", &SPS30_OK);
 		} else {
+			SPS30_OK = true;
 			sensor_channel_get(sps30, SENSOR_CHAN_PM_1_0, &pm_1p0);
 			sensor_channel_get(sps30, SENSOR_CHAN_PM_2_5, &pm_2p5);
 			sensor_channel_get(sps30, SENSOR_CHAN_PM_10, &pm_10p0);
@@ -166,14 +180,8 @@ int main(void)
 		} else {
 			SPS30_OK = false;
 			printk("No valid data to send (Sensor Data out of bound).\n");
+			send_error_message("No valid data to send (Sensor Data out of bound)", &SPS30_OK);
 		}
-
-		// sensor_sample_fetch(sps30);
-		
-		// printk("SPS30 Sensor Data:\n");
-		// printk("PM 1.0: %d.%06d mg/m^3\n", pm_1p0.val1, pm_1p0.val2);
-		// printk("PM 2.5: %d.%06d mg/m^3\n", pm_2p5.val1, pm_2p5.val2);
-		// printk("PM 10.0: %d.%06d mg/m^3\n", pm_10p0.val1, pm_10p0.val2);
 
 		k_sleep(K_SECONDS(20));
 	}

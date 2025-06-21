@@ -8,8 +8,7 @@
 #include "sensor/scd4x/scd4x.h"
 #include <openthread/coap.h>
 #include <openthread/thread.h>
-
-// TODO: Add error message to server sending for sensor.
+#include <zephyr/net/openthread.h> 
 
 // THREAD NETWORK CONFIGURATION //
 void coap_init(void)
@@ -119,17 +118,32 @@ static void send_coap_message(const char *uri_path, const char *payload)
 #error "No sensirion,scd4x compatible node found in the device tree"
 #endif
 
+#if !DT_HAS_COMPAT_STATUS_OKAY(ams_ccs811)
+#error "No sensirion,scd4x compatible node found in the device tree"
+#endif
+
 const struct device *scd41 = DEVICE_DT_GET_ANY(sensirion_scd41);
 const struct device *ccs811 = DEVICE_DT_GET_ANY(ams_ccs811);
 
-// Function to send SCD41 data in JSON format
+// Function to send data in JSON format to CoAP Server
+void send_error_message(const char *message, bool *scd41_ok, bool *ccs811_ok)
+{
+	char payload[256]; // Buffer to hold the JSON payload
+
+	// Construct the JSON payload
+	snprintf(payload, sizeof(payload), "{\"error\":\"%s\",\"SCD41_OK\":\"%s,\"CCS811_OK\":\"%s}\n", message, (*scd41_ok) ? "true" : "false", (*ccs811_ok) ? "true" : "false");
+
+	// Send the CoAP message
+	send_coap_message("sensor_data", payload);
+}
+
 void send_scd41_data(struct sensor_value co2_41, struct sensor_value temo, struct sensor_value humi, bool *scd41_ok)
 {
 	char payload[256]; // Buffer to hold the JSON payload
 
 	// Construct the JSON payload
 	snprintf(payload, sizeof(payload),
-			 "{\"sensor\":\"scd41\",\"data\":{\"CO2\":%d.%02d,\"Temperature\":%d.%02d,\"Humidity\":%d.%02d, \"SCD41_OK\":%s}}",
+			 "{\"sensor\":\"scd41\",\"data\":{\"CO2\":%d.%02d,\"Temperature\":%d.%02d,\"Humidity\":%d.%02d, \"SCD41_OK\":%s}}\n",
 			 co2_41.val1, co2_41.val2, temo.val1, temo.val2, humi.val1, humi.val2,
 			 (*scd41_ok) ? "true" : "false");
 
@@ -143,7 +157,7 @@ void send_ccs811_data(struct sensor_value co2_881, struct sensor_value tvoc, boo
 
 	// Construct the JSON payload
 	snprintf(payload, sizeof(payload),
-			 "{\"sensor\":\"ccs811\",\"data\":{\"eCO2\":%d.%02d,\"TVOC\":%d.%02d, \"CCS811_OK\":%s}}",
+			 "{\"sensor\":\"ccs811\",\"data\":{\"eCO2\":%d.%02d,\"TVOC\":%d.%02d, \"CCS811_OK\":%s}}\n",
 			 co2_881.val1, co2_881.val2, tvoc.val1, tvoc.val2, (*ccs881_ok) ? "true" : "false");
 
 	// Send the CoAP message
@@ -183,7 +197,9 @@ int main(void)
         if (sensor_sample_fetch(scd41) < 0) {
             printk("Failed to fetch sample from SCD41\n");
 			SCD41_OK = false;
+			send_error_message("Failed to fetch sample from SCD41", &SCD41_OK, &CCS811_OK);
         } else {
+			SCD41_OK = true;
             sensor_channel_get(scd41, SENSOR_CHAN_CO2, &co2_41);
             sensor_channel_get(scd41, SENSOR_CHAN_AMBIENT_TEMP, &temp);
             sensor_channel_get(scd41, SENSOR_CHAN_HUMIDITY, &humi);
@@ -191,9 +207,11 @@ int main(void)
 
         // Fetch data from CCS811
         if (sensor_sample_fetch(ccs811) < 0) {
-            printk("Failed to fetch sample from CCS811\n");
+            printk("Failed to fetch sample from CCS811\n");			
 			CCS811_OK = false;
+			send_error_message("Failed to fetch sample from CCS811", &SCD41_OK, &CCS811_OK);
         } else {
+			CCS811_OK = true;
             sensor_channel_get(ccs811, SENSOR_CHAN_CO2, &co2_811);
             sensor_channel_get(ccs811, SENSOR_CHAN_VOC, &tvoc);
         }
@@ -213,19 +231,23 @@ int main(void)
         } else if (scd41_valid) {
 			// if only SCD41 is valid, send SC41 data only
 			SCD41_OK = true;
+			CCS811_OK = false;
             printk("Sending data from SCD41 only...\n");
             send_scd41_data(co2_41, temp, humi, &SCD41_OK);
+			send_error_message("CCS811 data invalid, sending SCD41 data only.", &SCD41_OK, &CCS811_OK);
         } else if (ccs811_valid) {
 			// if only CCS811 is valid, send CCS811 data only
 			CCS811_OK = true;
+			SCD41_OK = false;
             printk("Sending data from CCS811 only...\n");
             send_ccs811_data(co2_811, tvoc, &CCS811_OK);
+			send_error_message("SCD41 data invalid, sending CCS811 data only.", &SCD41_OK, &CCS811_OK);
         } else {
 			// no data valid to send
 			SCD41_OK = false;
 			CCS811_OK = false;
             printk("No valid data to send (Sensor Data out of bound).\n");
-			//TODO: Add error message to server sending for sensor.
+			send_error_message("INVALID DATA SENT FROM SCD41 and CCS811",&SCD41_OK, &CCS811_OK);
         }
 
         k_sleep(K_SECONDS(20)); // Sleep before the next iteration
