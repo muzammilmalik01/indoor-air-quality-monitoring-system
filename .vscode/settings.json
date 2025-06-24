@@ -6,6 +6,12 @@
     ],
     "files.associations": {
         "ccs811.h": "c",
-        "i2c.h": "c"
-    }
+        "i2c.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "vector": "c",
+        "printk.h": "c"
+    },
+    "cmake.sourceDirectory": "/Users/muhammadmuzamil/nRF_Projects/SSNS_Project/semester_project/client_node1"
 }

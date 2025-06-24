@@ -131,7 +131,7 @@ void send_error_message(const char *message, bool *scd41_ok, bool *ccs811_ok)
 	char payload[256]; // Buffer to hold the JSON payload
 
 	// Construct the JSON payload
-	snprintf(payload, sizeof(payload), "{\"error\":\"%s\",\"SCD41_OK\":\"%s,\"CCS811_OK\":\"%s}\n", message, (*scd41_ok) ? "true" : "false", (*ccs811_ok) ? "true" : "false");
+	snprintf(payload, sizeof(payload), "{\"error\":\"%s\",\"SCD41_OK\":%s,\"CCS811_OK\":%s}\n", message, (*scd41_ok) ? "true" : "false", (*ccs811_ok) ? "true" : "false");
 
 	// Send the CoAP message
 	send_coap_message("sensor_data", payload);
@@ -180,24 +180,39 @@ int main(void)
 	bool SCD41_OK = false;
 	bool CCS811_OK = false;
 	coap_init();
-	if (!device_is_ready(scd41))
+	if (!device_is_ready(scd41) && !device_is_ready(ccs811))
 	{
-		printk("SCD41 device is not ready\n");
+		// Driver Issue or Sensor not physically connected. 
+		// Sensor is not powered, Sensor is not connected, I2C Pin mis-configured.
+		printk("SCD41 and CCS811 device is not ready\n");
+		send_error_message("SCD41 and CCS881 not ready - Sensors not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
 		return -1;
 	}
-	if (!device_is_ready(ccs811))
+	if (!device_is_ready(scd41) && device_is_ready(ccs811))
 	{
+		CCS811_OK = true;
+		printk("SCD41 device is not ready\n");
+		send_error_message("SCD41 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
+		return -1;
+	}
+	if (!device_is_ready(ccs811) && device_is_ready(scd41))
+	{
+		SCD41_OK = true;
 		printk("CCS811 device is not ready\n");
+		send_error_message("CCS811 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
 		return -1;
 	}
 
+	SCD41_OK = true;
+	CCS811_OK = true;
+	printk("SCD41 and CCS811 devices are ready\n");
 	struct sensor_value co2_41, co2_811, temp, humi, tvoc;
 	while (true) {
         // Fetch data from SCD41
         if (sensor_sample_fetch(scd41) < 0) {
             printk("Failed to fetch sample from SCD41\n");
 			SCD41_OK = false;
-			send_error_message("Failed to fetch sample from SCD41", &SCD41_OK, &CCS811_OK);
+			send_error_message("Unable to read data from SCD41 - Sensor Warming Up or Unresponsive.", &SCD41_OK, &CCS811_OK);
         } else {
 			SCD41_OK = true;
             sensor_channel_get(scd41, SENSOR_CHAN_CO2, &co2_41);
@@ -209,7 +224,7 @@ int main(void)
         if (sensor_sample_fetch(ccs811) < 0) {
             printk("Failed to fetch sample from CCS811\n");			
 			CCS811_OK = false;
-			send_error_message("Failed to fetch sample from CCS811", &SCD41_OK, &CCS811_OK);
+			send_error_message("Unable to read data from CCS811 - Sensor Warming Up or Unresponsive.", &SCD41_OK, &CCS811_OK);
         } else {
 			CCS811_OK = true;
             sensor_channel_get(ccs811, SENSOR_CHAN_CO2, &co2_811);
@@ -250,7 +265,7 @@ int main(void)
 			send_error_message("INVALID DATA SENT FROM SCD41 and CCS811",&SCD41_OK, &CCS811_OK);
         }
 
-        k_sleep(K_SECONDS(20)); // Sleep before the next iteration
+        k_sleep(K_SECONDS(60)); // Sleep before the next iteration
     }
 	return 0;
 }

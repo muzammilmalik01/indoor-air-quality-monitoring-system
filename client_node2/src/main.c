@@ -144,7 +144,7 @@ void send_error_message(const char *message, bool *sps30_ok)
 	char payload[256]; // Buffer to hold the JSON payload
 
 	// Construct the JSON payload
-	snprintf(payload, sizeof(payload), "{\"error\":\"%s\",\"SPS30_OK\":\"%s}\n", message, (*sps30_ok) ? "true" : "false");
+	snprintf(payload, sizeof(payload), "{\"error\":\"%s\",\"SPS30_OK\":%s}\n", message, (*sps30_ok) ? "true" : "false");
 
 	// Send the CoAP message
 	send_coap_message("sensor_data", payload);
@@ -154,17 +154,21 @@ int main(void)
 	bool SPS30_OK = false;
 	coap_init();
 	if (!device_is_ready(sps30)) {
+		// Driver Issue or Sensor not physically connected. 
+		// Sensor is not powered, Sensor is not connected, I2C Pin mis-configured.
 		printk("SPS30 device not ready\n");
-		return 1;
+		send_error_message("SPS30 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SPS30_OK);
+		return -1;
 	}
 	printk("SPS30 device is ready\n");
+	SPS30_OK = true;
 	struct sensor_value pm_1p0, pm_2p5, pm_10p0;
 
 	while(true) {
 		if (sensor_sample_fetch(sps30) < 0){
 			printk("Failed to fetch sample from SPS30 sensor\n");
 			SPS30_OK = false;
-			send_error_message("Failed to fetch sample from SPS30 sensor", &SPS30_OK);
+			send_error_message("Unable to read data from SPS30 - Sensor Warming Up or Unresponsive.", &SPS30_OK);
 		} else {
 			SPS30_OK = true;
 			sensor_channel_get(sps30, SENSOR_CHAN_PM_1_0, &pm_1p0);
@@ -180,10 +184,10 @@ int main(void)
 		} else {
 			SPS30_OK = false;
 			printk("No valid data to send (Sensor Data out of bound).\n");
-			send_error_message("No valid data to send (Sensor Data out of bound)", &SPS30_OK);
+			send_error_message("SPS30 - No valid data to send (Sensor Data out of bound)", &SPS30_OK);
 		}
 
-		k_sleep(K_SECONDS(20));
+		k_sleep(K_SECONDS(60));
 	}
 	return 0;
 }

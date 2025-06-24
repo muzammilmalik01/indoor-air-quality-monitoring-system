@@ -131,8 +131,6 @@ int main(void) {
     printk("UART device is ready\n");
     
     while (1) {
-        k_msleep(1000);  // 1-second delay
-        // tx_buf_length = sprintf(tx_buf, "CO2=430;PM=22;TVOC=120\n"); //Dummy Data
-        // uart_tx(uart_dev, tx_buf, tx_buf_length, SYS_FOREVER_US);
+       
     }
 }
