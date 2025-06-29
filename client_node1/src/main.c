@@ -177,95 +177,128 @@ bool is_ccs811_data_valid(struct sensor_value co2, struct sensor_value voc) {
 
 int main(void)
 {
-	bool SCD41_OK = false;
-	bool CCS811_OK = false;
-	coap_init();
-	if (!device_is_ready(scd41) && !device_is_ready(ccs811))
-	{
-		// Driver Issue or Sensor not physically connected. 
-		// Sensor is not powered, Sensor is not connected, I2C Pin mis-configured.
-		printk("SCD41 and CCS811 device is not ready\n");
-		send_error_message("SCD41 and CCS881 not ready - Sensors not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
-		return -1;
-	}
-	if (!device_is_ready(scd41) && device_is_ready(ccs811))
-	{
-		CCS811_OK = true;
-		printk("SCD41 device is not ready\n");
-		send_error_message("SCD41 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
-		return -1;
-	}
-	if (!device_is_ready(ccs811) && device_is_ready(scd41))
-	{
-		SCD41_OK = true;
-		printk("CCS811 device is not ready\n");
-		send_error_message("CCS811 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
-		return -1;
-	}
+    bool SCD41_OK = false;
+    bool CCS811_OK = false;
+    coap_init();
 
-	SCD41_OK = true;
-	CCS811_OK = true;
-	printk("SCD41 and CCS811 devices are ready\n");
-	struct sensor_value co2_41, co2_811, temp, humi, tvoc;
-	while (true) {
-        // Fetch data from SCD41
-        if (sensor_sample_fetch(scd41) < 0) {
-            printk("Failed to fetch sample from SCD41\n");
-			SCD41_OK = false;
-			send_error_message("Unable to read data from SCD41 - Sensor Warming Up or Unresponsive.", &SCD41_OK, &CCS811_OK);
-        } else {
-			SCD41_OK = true;
-            sensor_channel_get(scd41, SENSOR_CHAN_CO2, &co2_41);
-            sensor_channel_get(scd41, SENSOR_CHAN_AMBIENT_TEMP, &temp);
-            sensor_channel_get(scd41, SENSOR_CHAN_HUMIDITY, &humi);
-        }
-
-        // Fetch data from CCS811
-        if (sensor_sample_fetch(ccs811) < 0) {
-            printk("Failed to fetch sample from CCS811\n");			
-			CCS811_OK = false;
-			send_error_message("Unable to read data from CCS811 - Sensor Warming Up or Unresponsive.", &SCD41_OK, &CCS811_OK);
-        } else {
-			CCS811_OK = true;
-            sensor_channel_get(ccs811, SENSOR_CHAN_CO2, &co2_811);
-            sensor_channel_get(ccs811, SENSOR_CHAN_VOC, &tvoc);
-        }
-
-        // Validate data
-        bool scd41_valid = is_scd41_data_valid(co2_41, temp, humi);
-        bool ccs811_valid = is_ccs811_data_valid(co2_811, tvoc);
-
-        // Send data conditionally
-        if (scd41_valid && ccs811_valid) {
-			// if both sensors get valid data, send both
-			SCD41_OK = true;
-			CCS811_OK = true;
-            printk("Sending data from both sensors...\n");
-            send_scd41_data(co2_41, temp, humi, &SCD41_OK);
-            send_ccs811_data(co2_811, tvoc, &CCS811_OK); 
-        } else if (scd41_valid) {
-			// if only SCD41 is valid, send SC41 data only
-			SCD41_OK = true;
-			CCS811_OK = false;
-            printk("Sending data from SCD41 only...\n");
-            send_scd41_data(co2_41, temp, humi, &SCD41_OK);
-			send_error_message("CCS811 data invalid, sending SCD41 data only.", &SCD41_OK, &CCS811_OK);
-        } else if (ccs811_valid) {
-			// if only CCS811 is valid, send CCS811 data only
-			CCS811_OK = true;
-			SCD41_OK = false;
-            printk("Sending data from CCS811 only...\n");
-            send_ccs811_data(co2_811, tvoc, &CCS811_OK);
-			send_error_message("SCD41 data invalid, sending CCS811 data only.", &SCD41_OK, &CCS811_OK);
-        } else {
-			// no data valid to send
-			SCD41_OK = false;
-			CCS811_OK = false;
-            printk("No valid data to send (Sensor Data out of bound).\n");
-			send_error_message("INVALID DATA SENT FROM SCD41 and CCS811",&SCD41_OK, &CCS811_OK);
-        }
-
-        k_sleep(K_SECONDS(60)); // Sleep before the next iteration
+    if (!device_is_ready(scd41) && !device_is_ready(ccs811)) {
+        printk("SCD41 and CCS811 device is not ready\n");
+        send_error_message("SCD41 and CCS811 not ready - Sensors not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
+        return -1;
     }
-	return 0;
+
+    if (!device_is_ready(scd41) && device_is_ready(ccs811)) {
+        CCS811_OK = true;
+        printk("SCD41 device is not ready\n");
+        send_error_message("SCD41 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
+        return -1;
+    }
+
+    if (!device_is_ready(ccs811) && device_is_ready(scd41)) {
+        SCD41_OK = true;
+        printk("CCS811 device is not ready\n");
+        send_error_message("CCS811 not ready - Sensor not connected or Sensor's PINs mis-configured.", &SCD41_OK, &CCS811_OK);
+        return -1;
+    }
+
+    SCD41_OK = true;
+    CCS811_OK = true;
+    printk("SCD41 and CCS811 devices are ready\n");
+
+    struct sensor_value co2_41, temp, humi, co2_811, tvoc;
+    struct sensor_value co2_41_sum = {0}, temp_sum = {0}, humi_sum = {0};
+    struct sensor_value co2_811_sum = {0}, tvoc_sum = {0};
+
+    int valid_scd41_readings = 0;
+    int valid_ccs811_readings = 0;
+
+    while (true) {
+        // Reset sums and counters for averaging
+        co2_41_sum = (struct sensor_value){0};
+        temp_sum = (struct sensor_value){0};
+        humi_sum = (struct sensor_value){0};
+        co2_811_sum = (struct sensor_value){0};
+        tvoc_sum = (struct sensor_value){0};
+        valid_scd41_readings = 0;
+        valid_ccs811_readings = 0;
+
+        // Collect 3 readings over 15 seconds
+        for (int i = 0; i < 3; i++) {
+            // Fetch data from SCD41
+            if (sensor_sample_fetch(scd41) == 0) {
+                sensor_channel_get(scd41, SENSOR_CHAN_CO2, &co2_41);
+                sensor_channel_get(scd41, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+                sensor_channel_get(scd41, SENSOR_CHAN_HUMIDITY, &humi);
+
+                if (is_scd41_data_valid(co2_41, temp, humi)) {
+                    co2_41_sum.val1 += co2_41.val1;
+                    co2_41_sum.val2 += co2_41.val2;
+                    temp_sum.val1 += temp.val1;
+                    temp_sum.val2 += temp.val2;
+                    humi_sum.val1 += humi.val1;
+                    humi_sum.val2 += humi.val2;
+                    valid_scd41_readings++;
+                }
+            } else {
+                printk("Failed to fetch sample from SCD41\n");
+            }
+
+            // Fetch data from CCS811
+            if (sensor_sample_fetch(ccs811) == 0) {
+                sensor_channel_get(ccs811, SENSOR_CHAN_CO2, &co2_811);
+                sensor_channel_get(ccs811, SENSOR_CHAN_VOC, &tvoc);
+
+                if (is_ccs811_data_valid(co2_811, tvoc)) {
+                    co2_811_sum.val1 += co2_811.val1;
+                    co2_811_sum.val2 += co2_811.val2;
+                    tvoc_sum.val1 += tvoc.val1;
+                    tvoc_sum.val2 += tvoc.val2;
+                    valid_ccs811_readings++;
+                }
+            } else {
+                printk("Failed to fetch sample from CCS811\n");
+            }
+
+            k_sleep(K_SECONDS(15)); // Wait 5 seconds before the next reading
+        }
+
+        // Calculate averages
+        if (valid_scd41_readings > 0) {
+            co2_41_sum.val1 /= valid_scd41_readings;
+            co2_41_sum.val2 /= valid_scd41_readings;
+            temp_sum.val1 /= valid_scd41_readings;
+            temp_sum.val2 /= valid_scd41_readings;
+            humi_sum.val1 /= valid_scd41_readings;
+            humi_sum.val2 /= valid_scd41_readings;
+        }
+
+        if (valid_ccs811_readings > 0) {
+            co2_811_sum.val1 /= valid_ccs811_readings;
+            co2_811_sum.val2 /= valid_ccs811_readings;
+            tvoc_sum.val1 /= valid_ccs811_readings;
+            tvoc_sum.val2 /= valid_ccs811_readings;
+        }
+
+        // Send averaged data conditionally
+        if (valid_scd41_readings > 0 && valid_ccs811_readings > 0) {
+            printk("Sending averaged data from both sensors...\n");
+            send_scd41_data(co2_41_sum, temp_sum, humi_sum, &SCD41_OK);
+            send_ccs811_data(co2_811_sum, tvoc_sum, &CCS811_OK);
+        } else if (valid_scd41_readings > 0) {
+            printk("Sending averaged data from SCD41 only...\n");
+            send_scd41_data(co2_41_sum, temp_sum, humi_sum, &SCD41_OK);
+            send_error_message("CCS811 data invalid, sending SCD41 data only.", &SCD41_OK, &CCS811_OK);
+        } else if (valid_ccs811_readings > 0) {
+            printk("Sending averaged data from CCS811 only...\n");
+            send_ccs811_data(co2_811_sum, tvoc_sum, &CCS811_OK);
+            send_error_message("SCD41 data invalid, sending CCS811 data only.", &SCD41_OK, &CCS811_OK);
+        } else {
+            printk("No valid data to send (Sensor Data out of bound).\n");
+            send_error_message("INVALID DATA SENT FROM SCD41 and CCS811", &SCD41_OK, &CCS811_OK);
+        }
+
+        k_sleep(K_SECONDS(15)); // Sleep for the remaining time to complete 60 seconds
+    }
+
+    return 0;
 }

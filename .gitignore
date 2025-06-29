@@ -2,3 +2,5 @@ build*/
 client_node1/build*/
 client_node2/build*/
 server_node/build*/
+data_visualization/*.xlsx
+data_visualization/.venv/
