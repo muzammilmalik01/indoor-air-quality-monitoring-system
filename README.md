@@ -1,4 +1,4 @@
-# SSNS Project 🚀
+# Indoor Air Quality Monitoring System 🚀
 
 ## Overview 📖
 This project consists of two client nodes and one server node, all based on nRF52840 DK boards, and a data visualization web application. The client nodes collect sensor data and send it to the server node, which can then be visualized using the provided Python web app.
