@@ -119,7 +119,7 @@ static void send_coap_message(const char *uri_path, const char *payload)
 #endif
 
 #if !DT_HAS_COMPAT_STATUS_OKAY(ams_ccs811)
-#error "No sensirion,scd4x compatible node found in the device tree"
+#error "No sensirion,ccs811 compatible node found in the device tree"
 #endif
 
 const struct device *scd41 = DEVICE_DT_GET_ANY(sensirion_scd41);

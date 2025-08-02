@@ -1,4 +1,41 @@
-# Indoor Air Quality Monitoring System 🚀
+# Indoor Air Quality Monitoring System 🌿
+
+## Introduction 1️⃣
+A scalable, Thread-based indoor air quality monitoring prototype designed using nRF52840 DK boards and a Python-based web dashboard. The system collects real-time environmental data (CO₂, TVOC, PM1.0/2.5/10, Temp, Humidity), transmits it via CoAP protocol, and displays actionable insights on a Flask-powered web interface.
+
+⚠️ This project is designed as a proof-of-concept for environments like homes, hospitals, offices, and safety-critical facilities.
+
+## System Overview 📖
+
+### Hardware Setup
+![Hardware Setup](images/Hardware-Architecture.png)
+*Three nRF52840 DK boards connected and powered up*
+
+### Web Dashboard - Real-Time Monitor
+![Real-Time Dashboard](images/Real-Time-Data.png)
+*Live sensor data display with gauges and status indicators*
+
+### Web Dashboard - Historical Analysis
+![Historical Analysis](images/Historical-Analysis.png)
+*24-hour trend charts and insights*
+
+### Web Dashboard - Insights
+![Historical Analysis](images/Insights.png)
+*24-hour insights*
+
+### Network Topology
+![Network Topology](images/Network-Architecture.png)
+*Thread network architecture showing client-server communication*
+
+
+
+## Tech Stack 🔧
+- **Embedded Firmware:** nRF Connect SDK (Zephyr RTOS)
+- **MCU Platform:** Nordic nRF52840 DK
+- **Wireless Protocol:** Thread (IEEE 802.15.4), CoAP
+- **Web App:** Python (Flask, Pandas)
+- **Web-Dashboard**: HTML, CSS, JS
+- **Serial Interface**: FT232 UART-to-USB
 
 ## Overview 📖
 This project consists of two client nodes and one server node, all based on nRF52840 DK boards, and a data visualization web application. The client nodes collect sensor data and send it to the server node, which can then be visualized using the provided Python web app.
@@ -87,3 +124,13 @@ http://127.0.0.1:5000
 - Ensure all dependencies for **nRF Connect SDK v2.6.2** and Python are installed.
 - If you encounter permission issues with flashing, try running the flash command with `sudo`.
 - For more details, refer to the documentation in each node's directory. 
+
+## Documentation 📚
+
+### Final Report
+![Final Report](documentation/Final-Report.pdf)
+*A detailed report on the project and research performed using this setup.*
+
+### Presentation
+![Final Report](documentation/Presentation.pdf)
+*A beamer used to present the project to the clients (i.e: Professors 😉).*
