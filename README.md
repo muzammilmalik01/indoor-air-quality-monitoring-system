@@ -128,9 +128,9 @@ http://127.0.0.1:5000
 ## Documentation 📚
 
 ### Final Report
-![Final Report](documentation/Final-Report.pdf)
+[📄 Download Final Report](documentation/Final-Report.pdf)
 *A detailed report on the project and research performed using this setup.*
 
 ### Presentation
-![Final Report](documentation/Presentation.pdf)
+[📄 Download Presentation](documentation/Presentation.pdf)
 *A beamer used to present the project to the clients (i.e: Professors 😉).*
