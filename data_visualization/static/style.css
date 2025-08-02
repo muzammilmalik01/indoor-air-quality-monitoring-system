@@ -1,0 +1,673 @@
+/* Indoor Air Quality Monitor Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.datetime {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+.connection-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-connected {
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+}
+
+.status-disconnected {
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.status-connected .status-dot {
+    background: #4CAF50;
+}
+
+.status-disconnected .status-dot {
+    background: #F44336;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.last-update {
+    color: white;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.tab-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    gap: 10px;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.tab-btn.active {
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.realtime-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: start;
+}
+
+.sensors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 25px;
+    align-items: start;
+}
+
+.sensor-card {
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease;
+}
+
+.sensor-card:hover {
+    transform: translateY(-5px);
+}
+
+.sensor-title {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sensor-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.sensor-unit {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.gauge-container {
+    width: 120px;
+    height: 120px;
+    margin: 15px auto;
+    position: relative;
+}
+
+.gauge {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #4CAF50 0deg, #FFC107 120deg, #FF5722 240deg, #FF5722 360deg);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gauge::before {
+    content: '';
+    width: 80%;
+    height: 80%;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+}
+
+.gauge-needle {
+    position: absolute;
+    width: 2px;
+    height: 45%;
+    background: #333;
+    transform-origin: bottom center;
+    z-index: 10;
+}
+
+.status-panel {
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.aqi-status {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.aqi-value {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.aqi-label {
+    font-size: 1.2rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: white;
+    font-weight: 600;
+}
+
+.good { background: #4CAF50; }
+.moderate { background: #FFC107; color: #333; }
+.unhealthy { background: #FF5722; }
+
+.recommendations {
+    margin-top: 20px;
+}
+
+.recommendations h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.recommendation {
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 4px solid #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 5px;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.chart-card {
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.chart-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.insight-card {
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.insight-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.peak-info {
+    background: rgba(255, 193, 7, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border-left: 4px solid #FFC107;
+}
+
+.peak-value {
+    font-weight: bold;
+    color: #FF5722;
+}
+
+.peak-time {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Modern Gauge Styles */
+.modern-gauge {
+    width: 140px;
+    height: 140px;
+    margin: 20px auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gauge-ring {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    background: conic-gradient(from -135deg, 
+        #4CAF50 0deg, 
+        #4CAF50 90deg, 
+        #FFC107 90deg, 
+        #FFC107 180deg, 
+        #FF5722 180deg, 
+        #FF5722 270deg);
+    transform: rotate(-135deg);
+}
+
+.gauge-ring::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.gauge-needle-modern {
+    position: absolute;
+    width: 3px;
+    height: 50%;
+    background: linear-gradient(to top, #333, #666);
+    transform-origin: bottom center;
+    z-index: 10;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.gauge-center {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: #333;
+    border-radius: 50%;
+    z-index: 15;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.gauge-value-display {
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 100%;
+}
+
+.gauge-value-number {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.gauge-value-unit {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.sensor-card-modern {
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    padding: 10px 10px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.sensor-card-modern:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.sensor-title-modern {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.sensor-card-simple {
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.sensor-card-simple:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+}
+
+.sensor-value-modern {
+    font-size: 2.2rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.sensor-unit-modern {
+    font-size: 0.9rem;
+    color: #777;
+    font-weight: 500;
+}
+
+.gauge-svg {
+    width: 120px;
+    height: 120px;
+    display: block;
+    margin: 0 auto;
+}
+.gauge-bg {
+    fill: none;
+    stroke: #eee;
+    stroke-width: 12;
+}
+.gauge-arc {
+    fill: none;
+    stroke-width: 12;
+    stroke-linecap: round;
+    transition: stroke 0.3s;
+}
+.gauge-knob {
+    fill: #fff;
+    stroke: #333;
+    stroke-width: 3;
+    transition: fill 0.3s, stroke 0.3s;
+}
+.gauge-value-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    text-align: center;
+    width: 100%;
+    pointer-events: none;
+}
+.gauge-value-number {
+    font-size: 2.1rem;
+    font-weight: bold;
+    color: #222;
+    margin-bottom: 2px;
+}
+.gauge-value-unit {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.co2-gauge-card {
+    background: rgba(20, 20, 40, 0.85);
+    color: #fff;
+    border-radius: 22px;
+    padding: 28px 18px 18px 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    position: relative;
+    min-width: 240px;
+    max-width: 320px;
+    margin: 0 auto;
+}
+.gauge-location-label {
+    text-align: center;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    opacity: 0.85;
+}
+.large-gauge {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 8px auto;
+    position: relative;
+}
+.gauge-svg.large-svg {
+    width: 180px;
+    height: 180px;
+}
+.gauge-bg {
+    stroke-width: 18;
+}
+.gauge-arc {
+    stroke-width: 18;
+    stroke-linecap: round;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.18));
+}
+.gauge-knob {
+    stroke-width: 5;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.18));
+    transition: fill 0.3s, stroke 0.3s;
+}
+.gauge-value-center.large-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    width: 100%;
+    text-align: center;
+    pointer-events: none;
+}
+.gauge-value-number.large-number {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 1px;
+    line-height: 1.1;
+}
+.gauge-value-unit.large-unit {
+    font-size: 0.95rem;
+    color: #888;
+    margin-top: 1px;
+}
+.gauge-status-label {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 7px;
+    letter-spacing: 1px;
+    color: #888;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.gauge-card {
+    background: rgba(255,255,255,0.97);
+    color: #222;
+    border-radius: 22px;
+    padding: 18px 10px 12px 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+    position: relative;
+    min-width: 200px;
+    max-width: 260px;
+    margin: 0 auto;
+    border: 1px solid #f0f0f0;
+    min-height: 290px;
+    max-height: 320px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.gauge-location-label {
+    text-align: center;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    opacity: 0.85;
+    color: #555;
+}
+.large-gauge {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 8px auto;
+    position: relative;
+}
+.gauge-svg.large-svg {
+    width: 180px;
+    height: 180px;
+}
+.gauge-bg {
+    stroke-width: 18;
+    stroke: #f2f2f2;
+}
+.gauge-arc {
+    stroke-width: 18;
+    stroke-linecap: round;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.08));
+}
+.gauge-knob {
+    stroke-width: 5;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.10));
+    transition: fill 0.3s, stroke 0.3s;
+}
+.gauge-value-center.large-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    width: 100%;
+    text-align: center;
+    pointer-events: none;
+}
+.gauge-value-number.large-number {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 1px;
+    line-height: 1.1;
+}
+.gauge-value-unit.large-unit {
+    font-size: 0.95rem;
+    color: #888;
+    margin-top: 1px;
+}
+.gauge-status-label {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 7px;
+    letter-spacing: 1px;
+    color: #888;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+@media (max-width: 768px) {
+    .realtime-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .sensors-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+} 
